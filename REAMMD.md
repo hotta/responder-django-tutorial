@@ -1,1 +1,0 @@
-ライトコートさんが公開してくれている、[Responderを使ってDjangoチュートリアルをやってみた！](https://rightcode.co.jp/blog/information-technology/responder-django-tutorial-0)に沿って作った成果物。

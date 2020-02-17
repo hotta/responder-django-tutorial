@@ -74,3 +74,67 @@ async def logout(req, resp):
     # クッキーを削除 - req.cookie → クッキーの中身
     resp.set_cookie(key='username', value='', expires=0, max_age=0)
     api.redirect(resp, '/admin')
+
+@api.route('/add_Question')
+class addQuestion:
+    async def on_get(self, req, resp):
+        """
+        getの場合は追加専用ページを表示させる。
+        """
+        authorized(req, resp, api)
+
+        resp.content = api.template('add_question.html')
+
+    async def on_post(self, req, resp):
+        """
+        postの場合は受け取ったデータをQuestionテーブルに追加する。
+        """
+        data = await req.media()
+        error_messages = list()
+
+        # 何も入力されていない場合
+        if data.get('question_text') is None:
+            error_messages.append('質問内容が入力されていません。')
+            resp.content = api.template('add_question.html', error_messages=error_messages)
+            return
+
+        # テーブルに追加
+        question = Question(data.get('question_text'))
+        db.session.add(question)
+        db.session.commit()
+        db.session.close()
+
+        api.redirect(resp, '/admin_top')
+
+@api.route('/add_Choice')
+class AddChoice:
+    async def on_get(self, req, resp):
+        """
+        getの場合は追加専用ページを表示させる。
+        """
+        authorized(req, resp, api)
+
+        questions = db.session.query(Question.id, Question.question_text)
+        resp.content = api.template('add_choice.html', questions=questions)
+
+    async def on_post(self, req, resp):
+        """
+        postの場合は受け取ったデータをChoiceテーブルに追加する。
+        """
+        data = await req.media()
+        error_messages = list()
+
+        # 何も入力されていない場合
+        if data.get('choice_text') is None:
+            error_messages.append('選択肢が入力されていません。')
+            questions = db.session.query(Question.id, Question.question_text)
+            resp.content = api.template('add_choice.html', error_messages=error_messages, questions=questions)
+            return
+
+        # テーブルに追加
+        choice = Choice(data.get('question'), data.get('choice_text'))
+        db.session.add(choice)
+        db.session.commit()
+        db.session.close()
+
+        api.redirect(resp, '/admin_top')

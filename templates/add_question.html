@@ -1,0 +1,25 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<br><br>
+<h3>Add Question</h3>
+<a class="btn-sm btn-primary" href="/admin_top">Back to Admin top</a>
+<br>
+<br>
+<div class="row">
+    <div class="col-md5"><p>question_text</p></div>
+    <div class="col-md-7">
+        <form action="/add_Question" method="post">
+            <input type="text" name="question_text">
+
+            {% for error_message in error_messages %}
+                <p class="text-danger">{{error_message}}</p>
+            {% endfor %}
+            <br>
+            <br>
+            <input class="btn btn-warning" type="submit" name="submit" value="Add Question">
+        </form>
+    </div>
+</div>
+
+{% endblock %}
