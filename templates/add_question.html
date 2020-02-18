@@ -6,20 +6,92 @@
 <a class="btn-sm btn-primary" href="/admin_top">Back to Admin top</a>
 <br>
 <br>
-<div class="row">
-    <div class="col-md5"><p>question_text</p></div>
-    <div class="col-md-7">
-        <form action="/add_Question" method="post">
-            <input type="text" name="question_text">
-
-            {% for error_message in error_messages %}
-                <p class="text-danger">{{error_message}}</p>
-            {% endfor %}
-            <br>
-            <br>
-            <input class="btn btn-warning" type="submit" name="submit" value="Add Question">
-        </form>
+<br>
+<form action="/add_Question" method="post">
+    <h4 class="bg-info text-white" style="padding: 15px">QUESTION</h4>
+    <br>
+    <div class="row">
+        <div class="col-md-5"><p>question_text</p></div>
+        <div class="col-md-7"><input type="text" name="question_text"></div>
+        <br>
     </div>
-</div>
+    <hr>
+    <div class="row">
+        <div class="col-md-5">
+            <p>Date</p>
+        </div>
+        <div class="col-md-7">
+            <input type="text" name="date" value="{{date['year']}}-{{date['month']}}-{{date['day']}}">
+        </div>
+        <div class="col-md-5">
+            <p>Time</p>
+        </div>
+        <div class="col-md-7">
+            <input type="text" name="time" value="{{date['hour']}}:{{date['minute']}}:{{date['second']}}">
+        </div>
+    </div>
 
+    <br>
+    <h4 class="bg-info text-white" style="padding: 15px">CHOICES</h4>
+
+    <div id="add_choice">
+
+        <p style="background:#cccccc; padding: 10px">CHOICE #1</p>
+        <div class="row">
+            <div class="col-md-5">choice_text</div>
+            <div class="col-md-7"><input type="text" name="choices[]"></div>
+        </div>
+        <br>
+        <div class="row">
+            <div class="col-md-5">votes</div>
+            <div class="col-md-7"><input type="text" name="votes[]" value="0"></div>
+        </div>
+
+        <p style="background:#cccccc; padding: 10px">CHOICE #2</p>
+        <div class="row">
+            <div class="col-md-5">choice_text</div>
+            <div class="col-md-7"><input type="text" name="choices[]"></div>
+        </div>
+        <br>
+        <div class="row">
+            <div class="col-md-5">votes</div>
+            <div class="col-md-7"><input type="text" name="votes[]" value="0"></div>
+        </div>
+    </div>
+
+    <br>
+    <br>
+    <a class="btn btn-warning btn-sm" onclick="add()">+ Add another Choice</a>
+    <br>
+    <hr>
+    <input class="btn btn-warning" type="submit" name="submit" value="Add Question">
+</form>
+<br>
+<br>
+{% for error_message in error_messages %}
+<p class="text-danger">{{error_message}}</p>
+{% endfor %}
+
+<script>
+    var num = 3;
+    function add()
+    {
+        var div_element = document.createElement("div");
+        div_element.innerHTML =
+        '<hr>' + 
+        '<p style="background:#cccccc; padding: 10px">CHOICE #' + num + '</p>' +
+        '<div class="row">' +
+            '<div class="col-md-5">choice_text</div>' +
+            '<div class="col-md-7"><input type="text" name="choices[]"></div>' +
+        '</div>' +
+        '<br>' +
+        '<div class="row">' +
+            '<div class="col-md-5">votes</div>' +
+            '<div class="col-md-7"><input type="text" name="votes[]" value="0"></div>' +
+        '</div><br><br>';
+        var parent_object = document.getElementById("add_choice");
+        parent_object.appendChild(div_element);
+        num++;
+    }
+</script>
 {% endblock %}

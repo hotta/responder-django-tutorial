@@ -25,6 +25,7 @@
             <th>id</th>
             <th scope="col">question_text</th>
             <th scope="col">pub_date</th>
+            <th scope="col">Published recently?</th>
             <th scope="col"></th>
         </tr>
     </thead>
@@ -34,6 +35,13 @@
             <th scope="row">{{question['id']}}</th>
             <td>{{question['question_text']}}</td>
             <td>{{question['pub_date']}}</td>
+            <td>
+                {% if not was_recently[loop.index-1] %}
+                <div class="text-danger"><string>❌</string></div>
+                {% else %}
+                <div class="text-danger"><string>◯</string></div>
+                {% endif %}
+            </td>
             <td>
                 <a href="/change/question/{{question['id']}}" class="btn-secondary btn-sm">Change</a>
                 <a href="/delete/question/{{question['id']}}" class="btn-danger btn-sm">Delete</a>

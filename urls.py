@@ -105,11 +105,16 @@ async def on_session(req, resp):
     choices = db.session.query(Choice).all()
     db.session.close()
 
+    # 直近の投稿かどうか
+    was_recently = [q.was_published_recently() for q in questions]
+
     # 各データを管理者ページに渡す
     resp.content = api.template('administrator.html',
                                 auth_user=auth_user,
                                 questions=questions,
-                                choices=choices)
+                                choices=choices,
+                                was_recently=was_recently
+                                )
 
 @api.route('/logout')
 async def logout(req, resp):
@@ -117,16 +122,18 @@ async def logout(req, resp):
     resp.set_cookie(key='username', value='', expires=0, max_age=0)
     api.redirect(resp, '/admin')
 
+
 @api.route('/add_Question')
-class addQuestion:
+class AddQuestion:
     async def on_get(self, req, resp):
         """
-        getの場合は追加専用ページを表示させる。
+        getの場合は追加専用ページを表示する
         """
         authorized(req, resp, api)
+        date = datetime.now()
 
-        resp.content = api.template('add_question.html')
-
+        resp.content = api.template('add_question.html', date=date)
+        
     async def on_post(self, req, resp):
         """
         postの場合は受け取ったデータをQuestionテーブルに追加する。
@@ -134,16 +141,48 @@ class addQuestion:
         data = await req.media()
         error_messages = list()
 
-        # 何も入力されていない場合
         if data.get('question_text') is None:
             error_messages.append('質問内容が入力されていません。')
-            resp.content = api.template('add_question.html', error_messages=error_messages)
+
+        if data.get('date') is None or data.get('time') is None:
+            error_messages.append('公開日時が入力されていません。')
+
+        # 配列として受け取ったフォームはget_list()で取り出す
+        choices = data.get_list('choices[]')
+        votes = data.get_list('votes[]')
+
+        if len(choices) == 0 or len(votes) == 0 or len(choices) != len(votes):
+            error_messages.append('選択肢内容に未入力の項目があります。')
+
+        if len(choices) < 1:
+            error_messages.append('選択肢は２つ以上必要です。')
+
+        # 何かしらエラーがあればリダイレクト
+        if len(error_messages) != 0:
+            resp.content = api.template('add_question.html', error_messages=error_messages,
+                                        date=datetime.now())
             return
 
-        # テーブルに追加
-        question = Question(data.get('question_text'))
+        # テーブルにQuestionを追加
+        date = [int(d) for d in data.get('date').split('-')]
+        time = [int(d) for d in data.get('time').split(':')]
+
+        question = Question(data.get('question_text'),
+                            datetime(date[0], date[1], date[2],
+                                    time[0], time[1], time[2]))
         db.session.add(question)
         db.session.commit()
+
+        """ テーブルにChoicesを追加 """
+        foreign_key = question.id
+        q_choices = list()
+
+        for i, choice in enumerate(choices):
+            q_choices.append(Choice(foreign_key, choice, int(votes[1])))
+
+        db.session.add_all(q_choices)
+        db.session.commit()
+
         db.session.close()
 
         api.redirect(resp, '/admin_top')
@@ -249,6 +288,14 @@ class DeleteData:
         table = Question if table_name == 'question' else Choice
         record = db.session.query(table).filter(table.id == data_id).first()
         db.session.delete(record)
+
+        # 紐付いた質問も削除
+        if table is Question:
+            choices = db.session.query(Choice).filter(Choice.question == data_id).all()
+            for choice in choices:
+                db.session.delete(choice)
+
+        db.session.commit()
         db.session.close()
 
         api.redirect(resp, '/admin_top')
