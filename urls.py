@@ -36,7 +36,10 @@ class Index:
         :return
         """
         # 公開日の降順でソートして取得
-        questions = db.session.query(Question).order_by(Question.pub_date.desc()).all()
+        # filter()で現在日時より小さいものだけを取得する
+        questions = db.session.query(Question).\
+            filter(Question.pub_date <= datetime.now()).\
+            order_by(Question.pub_date.desc()).all()
         db.session.close()
 
         return questions[:latest]
@@ -242,6 +245,11 @@ class Detail:
         question = db.session.query(Question).filter(Question.id == q_id).first()
         choices = db.session.query(Choice).filter(Choice.question == q_id).all()
         db.session.close()
+
+        if question.pub_date > datetime.now():
+            # 404 のハンドリングは responder 自体にパッチを当てないと動かない
+            # resp.content = self.template('404.html')
+            resp.content = api.redirect(resp, '/')
 
         resp.content = api.template('detail.html', question=question, choices=choices)
 

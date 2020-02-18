@@ -56,7 +56,8 @@ class Question(Base):
         最近追加された質問であればTrueを返す
         :return:
         """
-        return self.pub_date >= datetime.now() - timedelta(days=days)
+        now = datetime.now()
+        return now - timedelta(days=days) <= self.pub_date <= now 
 
 class Choice(Base):
     """
