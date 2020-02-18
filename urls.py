@@ -12,6 +12,20 @@ import db
 
 from datetime import datetime
 
+# api = responder.API()
+
+# staticをjinja2で解決するためのstaticフィルターを定義
+# def static_filter(path):
+#    return '/static/' + path
+
+# jinji2 のフィルターに追加 → AttributeError: 'API' object has no attribute 'jinja_env'
+# api.jinja_env.filters['static'] = static_filter
+
+# 「jinja2のグローバル変数を使う方法も動かない
+# api.jinja_env.globals ...
+
+# static_dir も効いていない気がする？( 'style.cc' だけだと 404 になる)
+# api = responder.API(static_dir='static')
 api = responder.API()
 
 @api.route('/')
