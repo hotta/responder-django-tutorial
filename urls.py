@@ -15,8 +15,31 @@ from datetime import datetime
 api = responder.API()
 
 @api.route('/')
-def index(req, resp):
-    resp.content = api.template("index.html")
+class Index:
+    def on_get(self, req, resp):
+
+        # 最新５個の質問を降順で取得
+        questions = self.get_queryset()
+
+        # 最新かどうか
+        emphasized = [question.was_published_recently() for question in questions]
+
+        # フォーマットを変更して必要なものだけ
+        pub_date = [q.pub_date.strftime('%Y-%m-%d %H:%M:%S') for q in questions]
+
+        resp.content = api.template("index.html", questions=questions, emphasized=emphasized, pub_date=pub_date)
+
+    def get_queryset(self, latest=5):
+        """
+        最新latest個の質問を返す
+        :param latest:
+        :return
+        """
+        # 公開日の降順でソートして取得
+        questions = db.session.query(Question).order_by(Question.pub_date.desc()).all()
+        db.session.close()
+
+        return questions[:latest]
 
 @api.route('/admin')
 def admin(req, resp):
@@ -212,3 +235,38 @@ class DeleteData:
         db.session.close()
 
         api.redirect(resp, '/admin_top')
+
+@api.route('/detail/{q_id}')
+class Detail:
+    async def on_get(self, req, resp, q_id):
+        question = db.session.query(Question).filter(Question.id == q_id).first()
+        choices = db.session.query(Choice).filter(Choice.question == q_id).all()
+        db.session.close()
+
+        resp.content = api.template('detail.html', question=question, choices=choices)
+
+@api.route('/vote/{q_id}')
+class Vote:
+    async def on_post(self, req, resp, q_id):
+        # postデータを取得
+        data = await req.media()
+
+        # 該当するchoiceを取得しvoteをインクリメント
+        choice = db.session.query(Choice).filter(Choice.id == data.get('choice')).first()
+        choice.votes += 1
+        db.session.commit()
+        db.session.close()
+
+        # リダイレクト
+        url_redirect = '/result/' + str(q_id)
+        api.redirect(resp, url_redirect)
+
+@api.route('/result/{q_id}')
+class Result:
+    async def on_get(self, req, resp, q_id):
+
+        question = db.session.query(Question).filter(Question.id == q_id).first()
+        choices = db.session.query(Choice).filter(Choice.question == q_id).all()
+        db.session.close()
+
+        resp.content = api.template('result.html', question=question, choices=choices)

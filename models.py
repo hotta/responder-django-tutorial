@@ -3,7 +3,8 @@ models.py
 モデルの定義
 """
 import os
-from datetime import datetime
+from datetime import datetime   # datetime モジュールの datetime オブジェクトをインポート
+from datetime import timedelta  # datetime モジュールの timedelta オブジェクトをインポート
 
 from db import Base
 from db import engine
@@ -49,6 +50,13 @@ class Question(Base):
     def __str__(self):  # オブジェクトの文字列を返す
         return str(self.id) + ':' + self.question_text + '-' \
              + self.pub_date.strftime('%Y/%m/%d - %H:%M:%S')
+
+    def was_published_recently(self, days=1):
+        """
+        最近追加された質問であればTrueを返す
+        :return:
+        """
+        return self.pub_date >= datetime.now() - timedelta(days=days)
 
 class Choice(Base):
     """
