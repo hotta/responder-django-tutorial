@@ -10,6 +10,8 @@ import hashlib
 from models import User, Question, Choice
 import db
 
+from datetime import datetime
+
 api = responder.API()
 
 @api.route('/')
@@ -135,6 +137,78 @@ class AddChoice:
         choice = Choice(data.get('question'), data.get('choice_text'))
         db.session.add(choice)
         db.session.commit()
+        db.session.close()
+
+        api.redirect(resp, '/admin_top')
+
+@api.route('/change/{table_name}/{data_id}')
+class ChangeData:
+    async def on_get(self, req, resp, table_name, data_id):
+        authorized(req, resp, api)
+
+        table = Question if table_name == 'question' else Choice
+        # [table].id == data_idとなるようなレコードをひとつ持ってくる
+        field = db.session.query(table).filter(table.id == data_id).first()
+        resp.content = api.template('/change.html', field=field, table_name=table_name)
+
+    async def on_post(self, req, resp, table_name, data_id):
+        data = await req.media()
+        error_messages = list()
+
+        # 何も入力されていない場合
+        text = table_name + '_text'
+        if data.get(text) is None:
+            error_messages.append('入力されていない項目があります。')
+            resp.content = api.template('change.html', error_messages=error_messages,
+                                        field=data, table_name=table_name)
+            return
+
+        # データ更新
+        table = Question if table_name == 'question' else Choice
+        record = db.session.query(table).filter(table.id == data_id).first()
+
+        if table is Question:
+            record.question_text = data.get(text)
+            record.pub_date = datetime(
+                int(data['year']),
+                int(data['month']),
+                int(data['day']),
+                int(data['hour']),
+                int(data['minute']),
+                int(data['second'])
+            )
+        else:
+            record.choice_text = data.get(text)
+
+        db.session.commit()
+        db.session.close()
+
+        api.redirect(resp, '/admin_top')
+
+@api.route('/delete/{table_name}/{data_id}')
+class DeleteData:
+    async def on_get(self, req, resp, table_name, data_id):
+        authorized(req, resp, api)
+
+        table = Question if table_name == 'question' else Choice
+        # table.id == data_idとなるようなレコードをひとつ持ってくる
+        field = db.session.query(table).filter(table.id == data_id).first()
+        db.session.commit()
+#        db.session.close()     # これを書くと以下のエラーで落ちる
+# sqlalchemy.orm.exc.DetachedInstanceError: Instance <Choice at 0x1e94667b6c8> 
+# is not bound to a Session; attribute refresh operation cannot proceed 
+# (Background on this error at: http://sqlalche.me/e/bhk3)
+
+        resp.content = api.template('/delete.html', field=field, table_name=table_name)
+        db.session.close()  # ここに書くのが正しいらしい
+
+    async def on_post(self, req, resp, table_name, data_id):
+        data = await req.media()
+
+        # データ削除
+        table = Question if table_name == 'question' else Choice
+        record = db.session.query(table).filter(table.id == data_id).first()
+        db.session.delete(record)
         db.session.close()
 
         api.redirect(resp, '/admin_top')

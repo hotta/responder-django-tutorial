@@ -7,7 +7,7 @@ import db
 
 if __name__ == '__main__':
     # サンプル質問
-    question = models.Question("What's ip?")
+    question = models.Question("What's up?")
     db.session.add(question)
     db.session.commit()
 
