@@ -12,6 +12,8 @@ import db
 
 from datetime import datetime, timedelta
 
+import matplotlib.pyplot as plt
+
 # staticをjinja2で解決するためのstaticフィルターを定義
 # def static_filter(path):
 #    return '/static/' + path
@@ -25,13 +27,34 @@ from datetime import datetime, timedelta
 # static_dir も効いていない気がする？( 'style.cc' だけだと 404 になる)
 # api = responder.API(static_dir='static')
 
-api = responder.API()
+api = responder.API(
+    title='Polls Application with Responder',
+    version='1.0',
+    openapi='3.0.2',
+    docs_route='/docs',
+    description='This is a simple polls applicaiton referened Django tutorials with Responder 2.0.5',
+    contact={
+        'name': 'Michihide Hotta',
+        'url': None,
+        'email': 'hotta@net-newbie.com'
+    }
+)
+
+import schemas  # ModelSchema を import
 
 ####################################################
 #   /   利用者トップ画面
 ####################################################
 @api.route('/')
 class Index:
+    """
+    ---
+    get:
+        description: 質問一覧の取得（未来の質問は除く）
+        responses:
+            200:
+                description:    Success
+    """
     def on_get(self, req, resp):
 
         # 最新５個の質問を降順で取得
@@ -72,6 +95,35 @@ def admin(req, resp):
 ####################################################
 @api.route('/ad_login')
 class AdLogin:
+    """
+    ---
+    get:
+        description: Login view(admin.html)にリダイレクト
+    post:
+        description: ログインに成功したら管理者ページ(administrator.html)にリダイレクト
+        parameters:
+            -   name: username
+                in: body
+                required: true
+                description: ユーザ名
+                schema:
+                    type: strings
+                    properties:
+                        username:
+                            type: string
+                            example: hogehoge
+
+            -   name: password
+                in: body
+                required: true
+                description: パスワード
+                schema:
+                    type: strings
+                    example: a1B2c3D4e5
+        responsed:
+            200:
+                description: 管理者ページにリダイレクト
+    """
     async def on_get(self, req, resp):  # getならリダイレクト
         resp.content = api.template('admin.html')
     
@@ -403,4 +455,33 @@ class Result:
         choices = db.session.query(Choice).filter(Choice.question == q_id).all()
         db.session.close()
 
-        resp.content = api.template('result.html', question=question, choices=choices)
+        # 画像ファイルの保存先
+        file = f'static/images/q_{str(question.id)}.svg'
+
+        choice_text_list = [choice.choice_text for choice in choices]
+        choice_vote_list = [int(choice.votes) for choice in choices]
+
+        sum_votes = sum(choice_vote_list)
+        vote_rates = [float(vote / sum_votes) for vote in choice_vote_list]
+
+        # タイトルと棒グラフ描画
+        plt.title(question.question_text + '(Total ' + str(sum_votes) + ' votes')
+        plt.bar(choice_text_list, choice_vote_list, color='skyblue')
+
+        # 割合と投票人数を表示する。有効桁数は小数点第一位まで。
+        for x, y, v in zip(choice_text_list, vote_rates, choice_vote_list):
+            plt.text(x, v, str(v) + ' votes\n' + str(round(y*100, 1)) + '%',\
+                    ha='center', va='bottom')
+
+        # テキストがかぶらないように、y軸上限は常に最大投票数の1.2倍にしておく
+        plt.ylim(0, round(max(choice_vote_list)*1.2))
+
+        plt.savefig(file, format='svg')
+        plt.close()
+
+        # matplotlibによって保存されたsvgファイルを HTML で展開する際は、冒頭の4行が不要
+        # 必要なのは <svg> タグのみ
+        svg = open(file, 'r').readlines()[4:]
+
+        resp.content = api.template('result.html', question=question,\
+                                    choices=choices, svg=svg)

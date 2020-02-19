@@ -1,3 +1,13 @@
 a:link{color: orange;}
 a:visited{color: orange;}
 a:hover{color: coral;}
+
+body {
+    background-color: #eeeeee;
+}
+
+div.container  {
+    display: flex;
+    flex-direction: column;
+    min-height: 80vh;
+}

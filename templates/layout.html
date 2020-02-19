@@ -1,19 +1,25 @@
 <!-- templates/layout.html -->
 <!DOCTYPE html>
 <html lang="ja">
-    <head>
-        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+  <head>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
 <!--    <link rel="stylesheet" href="{ 'style.css' | static }"> 動かない -->
 <!--    <link rel="stylesheet" href="style.css"> static_dir を指定しても動かない -->
-        <link rel="stylesheet" href="/static/style.css">
-        <meta charset="UTF-8">
-        <title>Sample Pools Application</title>
-    </head>
-    <body style="background-color: #eeeeee">
-        <div class="container">
-            {% block content %}
-            <!-- メインコンテンツ -->
-            {% endblock %}
-        </div>
-    </body>
+    <link rel="stylesheet" href="/static/style.css">
+    <meta charset="UTF-8">
+    <title>Sample Pools Application</title>
+  </head>
+  <body>
+    <div class="container">
+      {% block content %}
+      <!-- メインコンテンツ -->
+      {% endblock %}
+    </div>
+    <br>
+    <hr>
+    <div align="center">
+      <p>Copyright &copy; ... All right reserved.</p>
+      <br>
+    </div>
+  </body>
 </html>

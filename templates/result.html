@@ -13,4 +13,10 @@
         &nbsp; {{choice['choice_text']}}
     </p>
 {% endfor %}
+
+{# グラフ表示の際、'>' や '<' 等の実体参照への展開を抑制する #}
+{% for line in svg %}
+    {% autoescape false %}{{line}}{% endautoescape %}
+{% endfor %}
+
 {% endblock %}
