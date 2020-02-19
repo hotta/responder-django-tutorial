@@ -10,9 +10,7 @@ import hashlib
 from models import User, Question, Choice
 import db
 
-from datetime import datetime
-
-# api = responder.API()
+from datetime import datetime, timedelta
 
 # staticをjinja2で解決するためのstaticフィルターを定義
 # def static_filter(path):
@@ -26,8 +24,12 @@ from datetime import datetime
 
 # static_dir も効いていない気がする？( 'style.cc' だけだと 404 になる)
 # api = responder.API(static_dir='static')
+
 api = responder.API()
 
+####################################################
+#   /   利用者トップ画面
+####################################################
 @api.route('/')
 class Index:
     def on_get(self, req, resp):
@@ -58,10 +60,16 @@ class Index:
 
         return questions[:latest]
 
+####################################################
+#   /admin   管理画面ログイン
+####################################################
 @api.route('/admin')
 def admin(req, resp):
     resp.content = api.template("admin.html")
 
+####################################################
+#   /ad_login   管理者ログイン要求
+####################################################
 @api.route('/ad_login')
 class AdLogin:
     async def on_get(self, req, resp):  # getならリダイレクト
@@ -89,6 +97,9 @@ class AdLogin:
         resp.set_cookie(key='username', value=username, expires=None, max_age=None)
         api.redirect(resp, '/admin_top')    # ログアウトの場合は expires=0, max_age=0
 
+####################################################
+#   /admin_top   管理者トップ画面
+####################################################
 @api.route('/admin_top')
 async def on_session(req, resp):
     """
@@ -97,11 +108,42 @@ async def on_session(req, resp):
 
     authorized(req, resp, api)
 
+    # GETメソッドで検索条件を受け取る
+    date_filter = None  # 日付フィルタ
+    q_str = ''          # （部分）検索文字列
+
+    if 'filter' in req.params:
+        date_filter = req.params['filter']
+
+    if 'q_str' in req.params:
+        q_str = req.params['q_str']
+
     # ログインユーザ名を取得
     auth_user = req.cookies.get('username')
 
-    # データベースから質問一覧を選択肢をすべて取得
-    questions = db.session.query(Question).all()
+    # データベースから質問一覧を選択肢を取得
+    # URLクエリがなければ全部
+    if date_filter is None and (q_str is None or q_str == ''):
+        questions = db.session.query(Question).all()
+    else:
+        if date_filter is not None:
+            today = datetime.now()
+            # 時間は不要
+            date_range = datetime(today.year, today.month, today.day)\
+                         - timedelta(days=int(date_filter))
+
+            if q_str is None or q_str == '':    # 投稿日検索のみ
+                questions = db.session.query(Question)\
+                            .filter(Question.pub_date >= date_range).all()
+            else:   # 両方
+                questions = db.session.query(Question)\
+                            .filter(Question.pub_date >= date_range,\
+                                    Question.question_text.like('%'+q_str+'%'))\
+                                    .all()
+        else:   # 文字列検索のみ
+            questions = db.session.query(Question)\
+                        .filter(Question.question_text.like('%'+q_str+'%')).all()
+
     choices = db.session.query(Choice).all()
     db.session.close()
 
@@ -116,13 +158,18 @@ async def on_session(req, resp):
                                 was_recently=was_recently
                                 )
 
+####################################################
+#   /logout   ログアウト要求
+####################################################
 @api.route('/logout')
 async def logout(req, resp):
     # クッキーを削除 - req.cookie → クッキーの中身
     resp.set_cookie(key='username', value='', expires=0, max_age=0)
     api.redirect(resp, '/admin')
 
-
+####################################################
+#   /add_Question   質問追加要求
+####################################################
 @api.route('/add_Question')
 class AddQuestion:
     async def on_get(self, req, resp):
@@ -187,6 +234,9 @@ class AddQuestion:
 
         api.redirect(resp, '/admin_top')
 
+####################################################
+#   /add_Choice   選択肢の追加要求
+####################################################
 @api.route('/add_Choice')
 class AddChoice:
     async def on_get(self, req, resp):
@@ -220,6 +270,9 @@ class AddChoice:
 
         api.redirect(resp, '/admin_top')
 
+####################################################
+#   /change/{table_name}/{data_id}   データ変更要求
+####################################################
 @api.route('/change/{table_name}/{data_id}')
 class ChangeData:
     async def on_get(self, req, resp, table_name, data_id):
@@ -264,6 +317,9 @@ class ChangeData:
 
         api.redirect(resp, '/admin_top')
 
+####################################################
+#   /delete/{table_name}/{data_id}   データ削除要求
+####################################################
 @api.route('/delete/{table_name}/{data_id}')
 class DeleteData:
     async def on_get(self, req, resp, table_name, data_id):
@@ -300,6 +356,9 @@ class DeleteData:
 
         api.redirect(resp, '/admin_top')
 
+####################################################
+#   /detail/{q_id}   投票画面表示
+####################################################
 @api.route('/detail/{q_id}')
 class Detail:
     async def on_get(self, req, resp, q_id):
@@ -314,6 +373,9 @@ class Detail:
 
         resp.content = api.template('detail.html', question=question, choices=choices)
 
+####################################################
+#   /vote/{q_id}   投票要求
+####################################################
 @api.route('/vote/{q_id}')
 class Vote:
     async def on_post(self, req, resp, q_id):
@@ -330,6 +392,9 @@ class Vote:
         url_redirect = '/result/' + str(q_id)
         api.redirect(resp, url_redirect)
 
+####################################################
+#   /result/{q_id}   投票結果表示
+####################################################
 @api.route('/result/{q_id}')
 class Result:
     async def on_get(self, req, resp, q_id):
